@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accueil</title>
+</head>
+<body>
+    <h1>Carte interactive</h1>
+    
+    <!-- Afficher la carte directement dans la page -->
+    <div id="map">
+        {{ carte_html | safe }}
+    </div>
+
+    <div id="info">
+        <h2>Informations supplémentaires</h2>
+        <p>{{ info }}</p>
+    </div>
+</body>
+</html>
