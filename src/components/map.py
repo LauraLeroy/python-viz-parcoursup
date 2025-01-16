@@ -1,8 +1,4 @@
-# home.py
-
 import json
-import folium
-from folium.plugins import MarkerCluster
 
 def fetch_data_from_geojson(file_path, year):
     """ Récupère les données du GeoJSON pour une année donnée, en regroupant les formations par établissement """
@@ -44,51 +40,3 @@ def fetch_data_from_geojson(file_path, year):
     results = list(establishments.values())
     print(f"{len(results)} établissements trouvés pour l'année {year}.")
     return results
-
-
-
-# def create_interactive_map(features):
-#     """ Crée une carte interactive avec des popups contenant les informations détaillées """
-#     print("Création de la carte interactive...")
-#     m = folium.Map(location=[47.0, 2.0], zoom_start=6, tiles="cartodbpositron")
-
-#     marker_cluster = MarkerCluster().add_to(m)  # Ajoute un cluster de marqueurs à la carte
-
-#     # Ajout de chaque point sur la carte
-#     for feature in features:
-#         etab_uai = feature['etab_uai']
-#         etab_nom = feature['etab_nom']
-#         latitude = feature['latitude']
-#         longitude = feature['longitude']
-#         nom_formation = feature['nom_formation']
-#         annee = feature['annee']
-
-#         # Créer le contenu HTML du popup de base
-#         html = f"""
-#         <h1>{etab_nom}</h1>
-#         <p><b>Nom de l'établissement:</b> {etab_nom}</p>
-#         <p><b>Nom de la formation:</b> {nom_formation}</p>
-#         <p><b>Année:</b> {annee}</p>
-#         <p><button id="btn-{etab_uai}">Obtenir plus d'informations</button></p>
-#         <div id="api-result-{etab_uai}"></div>
-#         <script>
-#             document.getElementById("btn-{etab_uai}").onclick = function() {{
-#                 window.parent.postMessage({{
-#                     action: 'fetchData',
-#                     annee: '{annee}',
-#                     cod_uai: '{etab_uai}'
-#                 }}, '*');
-#             }};
-#         </script>
-#         """
-
-#         iframe = folium.IFrame(html=html, width=300, height=250)
-#         popup = folium.Popup(iframe, max_width=2650)
-
-#         folium.Marker(
-#             location=[latitude, longitude],
-#             popup=popup
-#         ).add_to(marker_cluster)
-
-#     # Retourner la carte générée
-#     return m

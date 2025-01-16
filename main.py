@@ -1,31 +1,32 @@
 import os
 import sys
+import pandas as pd
 from dash import Dash, html, dcc, Input, Output, ctx, ALL
 from flask_caching import Cache
 import dash_leaflet as dl
-import dash_leaflet.express as dlx
+
 import json
 import requests
-import plotly.express as px
-import plotly.graph_objects as go
+
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'pages')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'components')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'utils')))
 
 from src.components.map import fetch_data_from_geojson
+from src.components.graphs import generate_pie_chart, create_nested_pie_chart, generate_heatmap
+from src.components.header import create_header
+from src.components.footer import create_footer
 
 # Initialiser l'application Dash
 app = Dash(__name__, suppress_callback_exceptions=True)
-
 # Configuration du cache
 cache = Cache(app.server, config={'CACHE_TYPE': 'simple'})
 
-geojson_file_path = "./data/raw/fr-esr-cartographie_formations_parcoursup.geojson"
-
 # Layout de l'application
 app.layout = html.Div([
-    html.H1("Visualisation des formations Parcoursup avec Dash Leaflet"),
+    create_header(),
     html.P("Choisissez une année pour visualiser les données :"),
     dcc.Slider(
         id="annee-slider",
@@ -51,6 +52,7 @@ app.layout = html.Div([
         style={'width': '100%', 'height': '500px'}
     ),
     html.Div(id="api-result-container"),  # Container pour afficher les résultats de l'API
+    create_footer()
 ])
 
 
@@ -62,7 +64,6 @@ app.layout = html.Div([
 @cache.memoize(timeout=3600)  # Cache pendant 1 heure
 def update_geojson_data(annee_cible):
     features = fetch_data_from_geojson(geojson_file_path, str(annee_cible))
-
     # Convertir les features en format GeoJSON
     geojson_data = {
         "type": "FeatureCollection",
@@ -84,11 +85,9 @@ def update_geojson_data(annee_cible):
     }
     return geojson_data
 
-
-
 def process_api_response(response):
 
-    if(response["total_count"] == 0):
+    if(not response and response["total_count"] == 0):
         return []
     
     data = {
@@ -107,9 +106,9 @@ def process_api_response(response):
         results = []
         for formation in response['results']:
             # Création d'un dictionnaire pour chaque formation avec ses informations spécifiques
-            print(formation)
             formation_data = {
                 'intitule_formation': formation.get('lib_for_voe_ins', ''),
+                'form_lib_voe_acc': formation.get('form_lib_voe_acc', ''),
                 'selectivite': formation.get('select_form', ''),
                 'capacite': formation.get('capa_fin', ''),
                 'effectif_total_candidat': formation.get('voe_tot', ''),
@@ -144,100 +143,14 @@ def process_api_response(response):
     
     return data
 
-def generate_pie_chart(result):
-    labels = ['Sans Mention', 'Mention AB', 'Mention B', 'Mention TB', 'Mention TBF']
-    values = [
-        result['effectif_admis_mention_aucune'],
-        result['effectif_admis_mention_AB'],
-        result['effectif_admis_mention_B'],
-        result['effectif_admis_mention_TB'],
-        result['effectif_admis_mention_TBF'],
-    ]
-    fig = px.pie(
-        names=labels,
-        values=values,
-        title=f"Répartition des mentions au bac des admis pour la formation {result['intitule_formation']}"
-    )
-    return fig
-
-def create_nested_pie_chart(data):
-    # Extraction des données de base
-    candidats = [
-        data['effectif_total_candidat_bg_pp'],
-        data['effectif_total_candidat_bt_pp'],
-        data['effectif_total_candidat_bp_pp'],
-        data['effectif_total_candidat_autre_pp'],
-    ]
-    propositions = [
-        data['proposition_admission_total_BG'],
-        data['proposition_admission_total_BT'],
-        data['proposition_admission_total_BP'],
-        data['proposition_admission_total_autre'],
-    ]
-    admis = [
-        data['effectif_admis_BG'],
-        data['effectif_admis_BT'],
-        data['effectif_admis_BP'],
-        data['effectif_admis_at'],
-    ]
-
-    # Calcul des catégories opposées proposition vs refusés, admis vs voeux non accepté
-    refuses = [max(c - p, 0) for c, p in zip(candidats, propositions)]  # Refusé
-    voeux_non_acceptes = [max(p - a, 0) for p, a in zip(propositions, admis)]  # Vœux non acceptés
-
-    labels = [
-        "Candidats BG", "Propositions BG", "Admis BG", "Vœux non acceptés BG", "Refusé BG",
-        "Candidats BT", "Propositions BT", "Admis BT", "Vœux non acceptés BT", "Refusé BT",
-        "Candidats BP", "Propositions BP", "Admis BP", "Vœux non acceptés BP", "Refusé BP",
-        "Candidats Autres", "Propositions Autres", "Admis Autres", "Vœux non acceptés Autres", "Refusé Autres",
-    ]
-
-    # Définition des parents pour la hiérarchie
-    parents = [
-        "", "Candidats BG", "Propositions BG", "Propositions BG", "Candidats BG",  # BG
-        "", "Candidats BT", "Propositions BT", "Propositions BT", "Candidats BT",  # BT
-        "", "Candidats BP", "Propositions BP", "Propositions BP", "Candidats BP",  # BP
-        "", "Candidats Autres", "Propositions Autres", "Propositions Autres", "Candidats Autres",  # Autres
-    ]
-
-    values = [
-        candidats[0], propositions[0], admis[0], voeux_non_acceptes[0], refuses[0],  # BG
-        candidats[1], propositions[1], admis[1], voeux_non_acceptes[1], refuses[1],  # BT
-        candidats[2], propositions[2], admis[2], voeux_non_acceptes[2], refuses[2],  # BP
-        candidats[3], propositions[3], admis[3], voeux_non_acceptes[3], refuses[3],  # Autres
-    ]
-
-    colors = [
-        "#1B4965", "#0081A7", "#00AFB9", "#62B6CB", "#BEE9E8",  # BG  --> Candidats, Propositions, Admis, Vœux non acceptés, Refusé, 
-        "#FF7B00", "#FF9500", "#FFA200", "#FFB700", "#FF8800",  # BT
-        "#55753C", "#96BE8C", "#ACECA1", "#C9F2C7", "#629460",  # BP
-        "#6E0D0D", "#F73E3E", "#A81111", "#FF7777", "#DE1021",  # Autres
-    ]
-
-    fig = go.Figure(go.Sunburst(
-        labels=labels,
-        parents=parents,
-        values=values,
-        branchvalues="total",  # Les parents incluent les enfants
-        marker=dict(colors=colors)
-    ))
-
-    # Mise en forme de la figure
-    fig.update_layout(
-        title="Répartition des candidats, propositions et admis par type de bac",
-        margin=dict(t=40, l=0, r=0, b=0),
-    )
-
-    return fig
-
-
 # Callback pour gérer les clics sur les clusters ou marqueurs individuels
 @app.callback(
     Output("api-result-container", "children"),
-    Input("geojson-layer", "clickData"),
+    [Input("geojson-layer", "clickData"),
+     Input("annee-slider", "value")],
     prevent_initial_call=True,
 )
-def fetch_api_data(feature):
+def fetch_api_data(feature, selected_year):
     if not feature:
         return "Cliquez sur un marqueur pour voir les informations."
 
@@ -271,10 +184,15 @@ def fetch_api_data(feature):
                 html.P(f"Formation Sélective: {result['selectivite']}"),
                 html.A("Voir la fiche", href=result["lien_form_psup"], target="_blank"),
                 dcc.Graph(figure=generate_pie_chart(result), style={'display': 'inline-block', 'width': '49%'}),  # graphique des mentions
-                dcc.Graph(figure=create_nested_pie_chart(result), style={'display': 'inline-block', 'width': '49%'}) #graphiques avec type de bac
+                dcc.Graph(figure=create_nested_pie_chart(result), style={'display': 'inline-block', 'width': '49%'}), # graphiques avec type de bac
+                dcc.Graph(figure=generate_heatmap(dfJson, formation=result, annee=selected_year) , responsive=True) if generate_heatmap(dfJson, formation=result, annee=2023) else html.P("Heatmap non disponible"),
             ]))
         return html.Div(divs)
     else:
         return html.P("Aucune information disponible pour cet établissement.")
+
 if __name__ == "__main__":
+    geojson_file_path = "./data/raw/fr-esr-cartographie_formations_parcoursup.geojson"
+    spe_json_file_path = "./data/raw/fr-esr-parcoursup-enseignements-de-specialite-bacheliers-generaux-2.json"
+    dfJson = pd.read_json(spe_json_file_path, encoding='utf-8')
     app.run_server(debug=False)
