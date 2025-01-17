@@ -2,7 +2,7 @@ import pandas as pd
 import plotly_express as px
 from dash import Dash, dcc, html, dash_table, callback, Output, Input
 
-df = pd.read_json("fr-esr-parcoursup-enseignements-de-specialite-bacheliers-generaux-2.json",encoding="utf-8")
+df = pd.read_json("./data/raw/fr-esr-parcoursup-enseignements-de-specialite-bacheliers-generaux-2.json",encoding="utf-8")
 
 df["couple_specialites"] = df["doublette"].apply(lambda x: f"{x[0]}, {x[1]}")
 specialites = df["couple_specialites"] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
