@@ -1,6 +1,8 @@
 import plotly.express as px
 import plotly.graph_objects as go
 from src.utils.fuzzy_word import categorize
+from plotly.subplots import make_subplots
+
 def generate_pie_chart(result):
     labels = ['Sans Mention', 'Mention AB', 'Mention B', 'Mention TB', 'Mention TBF']
     values = [
@@ -96,12 +98,12 @@ def create_nested_pie_chart(data):
 
     return fig
 
-def generate_heatmap(df,formation, annee):
+def generate_heatmap(df, formation, annee):
     # Filtrer les données par formation et année
     df_filtered = df[df["annee_du_bac"] == annee]
 
     value_index_map = {row["formation"]: index for index, row in df_filtered.iterrows()}
-    processed_formation = categorize(formation['intitule_formation'], formation['form_lib_voe_acc'],value_index_map)
+    processed_formation = categorize(formation['intitule_formation'], formation['form_lib_voe_acc'], value_index_map)
     df_filtered = df[(df["formation"] == processed_formation) & (df["annee_du_bac"] == annee)].copy()
     if df_filtered.empty:
         return None
@@ -117,24 +119,131 @@ def generate_heatmap(df,formation, annee):
         fill_value=0
     )
     
+    # Normalisation par rapport à la valeur maximale
+    max_value = pivot_table.max().max()  # Trouver la valeur maximale dans le tableau
+    pivot_table_percentage = (pivot_table / max_value) * 100
+
     fig = px.imshow(
-        pivot_table,
+        pivot_table_percentage,
         labels={
             "x": "Spécialité 1 (Axe X)",
             "y": "Spécialité 2 (Axe Y)",
-            "color": "Propositions"
+            "color": "Pourcentage (%)"
         },
-        title=f"Répartition des propositions d'admission ({formation} - {annee})",
+        title=f"Répartition des propositions d'admission ({formation['intitule_formation']} - {annee})",
         color_continuous_scale="Portland",
-        text_auto=True
+        text_auto=".2f",  # Formater les valeurs en pourcentage avec 2 décimales
+        zmin=0,  # Définir le minimum de l'échelle de couleur à 0%
+        zmax=100,  # Définir le maximum de l'échelle de couleur à 100%
+        range_color=[0, 100]
     )
     fig.update_layout(
         xaxis_title="Spécialité 1", 
         yaxis_title="Spécialité 2",
         autosize=True,
-        margin=dict(l=100, r=50, t=50, b=100),
-
+        height=700,  # Set a fixed minimum height
+        margin=dict(
+            l=150,    # Increased left margin for y-axis labels
+            r=50,
+            t=100,    # Increased top margin for title
+            b=150     # Increased bottom margin for x-axis labels
+        ),
+        coloraxis_colorbar=dict(
+            tickformat=".0%",  # Formater les ticks de la barre en pourcentage
+            title="Pourcentage"
+        ),
     )
-    fig.update_xaxes(tickangle=45)  # Labels de l'axe X inclinés à 45°
-    fig.update_yaxes(tickangle=0)  # Labels de l'axe Y laissés verticaux
+    fig.update_xaxes(tickangle=45, tickfont=dict(size=10),automargin=True)  # Labels de l'axe X inclinés à 45°
+    fig.update_yaxes(tickangle=0, tickfont=dict(size=10),automargin=True)  # Labels de l'axe Y laissés verticaux
+    
+    # fig.update_xaxes(ticktext=[textwrap.fill(label, width=15) for label in pivot_table.columns])
+    # fig.update_yaxes(ticktext=[textwrap.fill(label, width=15) for label in pivot_table.index])
+    return fig
+
+def generate_gender_metrics(formation_data):
+    """
+    Generate visualizations focusing on gender distribution in formation data.
+    
+    Args:
+        formation_data (dict): Data for a single formation.
+    """
+    # Create figure with 1 row and 2 columns
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=(
+            "Répartition par genre des candidatures et admissions",
+            "Évolution du ratio femmes/hommes"
+        ),
+        specs=[
+            [{"type": "sunburst"}, {"type": "bar"}]
+        ]
+    )
+    
+    # 1. Combined Sunburst Chart for Candidatures and Admissions
+    labels = ['Total', 'Femmes', 'Hommes', 'Femmes Admis', 'Hommes Admis']
+    parents = ['', 'Total', 'Total', 'Femmes', 'Hommes']
+    values = [
+        formation_data['effectif_total_candidat'],
+        formation_data['effectif_total_candidat_femme'],
+        formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
+        formation_data['acceptation_total_f'],
+        formation_data['acceptation_total'] - formation_data['acceptation_total_f']
+    ]
+
+    fig.add_trace(
+        go.Sunburst(
+            labels=labels,
+            parents=parents,
+            values=values,
+            branchvalues='total',
+            name="Répartition par genre",
+            hovertemplate="<b>%{label}</b><br>Count: %{value}<extra></extra>"
+        ),
+        row=1, col=1
+    )
+    
+    # 2. Évolution du ratio femmes/hommes (Bar chart for absolute counts)
+    fig.add_trace(
+        go.Bar(
+            name='Femmes',
+            x=['Candidatures', 'Admissions'],
+            y=[formation_data['effectif_total_candidat_femme'], formation_data['acceptation_total_f']],
+            text=[formation_data['effectif_total_candidat_femme'], formation_data['acceptation_total_f']],
+            textposition='auto',
+            marker_color='#FF69B4',
+            hovertemplate="Femmes<br>%{x}: %{y}<extra></extra>"
+        ),
+        row=1, col=2
+    )
+    
+    fig.add_trace(
+        go.Bar(
+            name='Hommes',
+            x=['Candidatures', 'Admissions'],
+            y=[formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
+               formation_data['acceptation_total'] - formation_data['acceptation_total_f']],
+            text=[formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
+                  formation_data['acceptation_total'] - formation_data['acceptation_total_f']],
+            textposition='auto',
+            marker_color='#4169E1',
+            hovertemplate="Hommes<br>%{x}: %{y}<extra></extra>"
+        ),
+        row=1, col=2
+    )
+    
+    # Update layout
+    fig.update_layout(
+        title={
+            'text': f"Analyse de la répartition femmes/hommes - {formation_data['intitule_formation']}",
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        showlegend=True,
+        height=600,
+        template='plotly_white',
+        barmode='group'
+    )
+    
     return fig

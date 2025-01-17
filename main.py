@@ -4,7 +4,7 @@ import pandas as pd
 from dash import Dash, html, dcc, Input, Output, ctx, ALL
 from flask_caching import Cache
 import dash_leaflet as dl
-
+import dash_bootstrap_components as dbc
 import json
 import requests
 
@@ -15,43 +15,68 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', '
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'utils')))
 
 from src.components.map import fetch_data_from_geojson
-from src.components.graphs import generate_pie_chart, create_nested_pie_chart, generate_heatmap
+from src.components.graphs import generate_pie_chart, create_nested_pie_chart, generate_heatmap, generate_gender_metrics
+
 from src.components.header import create_header
 from src.components.footer import create_footer
 
 # Initialiser l'application Dash
-app = Dash(__name__, suppress_callback_exceptions=True)
+app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # Configuration du cache
 cache = Cache(app.server, config={'CACHE_TYPE': 'simple'})
 
 # Layout de l'application
 app.layout = html.Div([
     create_header(),
-    html.P("Choisissez une année pour visualiser les données :"),
-    dcc.Slider(
-        id="annee-slider",
-        min=2021,
-        max=2025,
-        step=1,
-        marks={year: str(year) for year in range(2021, 2026)},
-        value=2023,  # Année par défaut
-    ),
-    dl.Map(
-        id="map",
-        center=[47.0, 2.0],  # Centré sur la France
-        zoom=6,
-        children=[
-            dl.TileLayer(),  # Fond de carte
-            dl.GeoJSON(
-                id="geojson-layer",
-                cluster=True,  # Active le clustering
-                zoomToBoundsOnClick=True,
-                superClusterOptions={"radius": 100},  # Options de supercluster
-            ),
-        ],
-        style={'width': '100%', 'height': '500px'}
-    ),
-    html.Div(id="api-result-container"),  # Container pour afficher les résultats de l'API
+    dbc.Container([  # Main container for content
+        dbc.Row([
+            dbc.Col([
+                html.P("Choisissez une année pour visualiser les données :"),
+                dcc.Slider(
+                    id="annee-slider",
+                    min=2021,
+                    max=2025,
+                    step=1,
+                    marks={year: str(year) for year in range(2021, 2026)},
+                    value=2023,
+                ),
+            ], width={"size": 8, "offset": 2}, className="mb-4")  # Centered slider
+        ]),
+        
+        dbc.Row([
+            dbc.Col([
+                html.Div([  # Wrapper for the map
+                    dl.Map(
+                        id="map",
+                        center=[47.0, 2.0],
+                        zoom=6,
+                        children=[
+                            dl.TileLayer(),
+                            dl.GeoJSON(
+                                id="geojson-layer",
+                                cluster=True,
+                                zoomToBoundsOnClick=True,
+                                superClusterOptions={"radius": 100},
+                            ),
+                        ],
+                        style={
+                            'width': '100%', 
+                            'height': '500px',
+                            'border': '1px solid #ddd',  # Optional: adds a border
+                            'border-radius': '8px',      # Optional: rounded corners
+                        }
+                    )
+                ], className="shadow-sm")  # Optional: adds subtle shadow
+            ], width={"size": 10, "offset": 1}, className="mb-4")  # Centered map
+        ]),
+        
+        dbc.Row([
+            dbc.Col([
+                html.Div(id="api-result-container")
+            ], width={"size": 10, "offset": 1})  # Centered results
+        ]),
+    ], fluid=False),  # Using fixed-width container
+    
     create_footer()
 ])
 
@@ -167,7 +192,8 @@ def fetch_api_data(feature, selected_year):
     if len(data) == 0:
         return html.P("Aucune information disponible pour cet établissement.")
 
-    divs = [
+    # Header information
+    header = [
         html.H3(f"Détails de l'établissement {data['nom_etab']}"),
         html.P(f"Session: {data['session']}"),
         html.P(f"Académie: {data['academie']}"),
@@ -176,20 +202,93 @@ def fetch_api_data(feature, selected_year):
         html.P(f"Région: {data['region']}"),
     ]
 
-    # Ajouter les détails pour chaque formation
-    if "results" in data and len(data["results"]) > 0:
-        for result in data["results"]:
-            divs.append(html.Div([
-                html.P(f"Intitulé de la formation: {result['intitule_formation']}"),
-                html.P(f"Formation Sélective: {result['selectivite']}"),
-                html.A("Voir la fiche", href=result["lien_form_psup"], target="_blank"),
-                dcc.Graph(figure=generate_pie_chart(result), style={'display': 'inline-block', 'width': '49%'}),  # graphique des mentions
-                dcc.Graph(figure=create_nested_pie_chart(result), style={'display': 'inline-block', 'width': '49%'}), # graphiques avec type de bac
-                dcc.Graph(figure=generate_heatmap(dfJson, formation=result, annee=selected_year) , responsive=True) if generate_heatmap(dfJson, formation=result, annee=2023) else html.P("Heatmap non disponible"),
-            ]))
-        return html.Div(divs)
-    else:
-        return html.P("Aucune information disponible pour cet établissement.")
+    if "results" not in data or len(data["results"]) == 0:
+        return html.Div(header + [html.P("Aucune information disponible pour cet établissement.")])
+
+    # Create tabs for formations
+    formation_tabs = []
+    for result in data["results"]:
+        tab_content = [
+            # Formation info section
+            html.H4(result['intitule_formation'], className='mb-3'),
+            html.P([
+                "Formation Sélective: ",
+                html.Span(result['selectivite'], className='font-weight-bold')
+            ]),
+            html.A(
+                "Voir la fiche",
+                href=result["lien_form_psup"],
+                target="_blank",
+                className="btn btn-primary mb-3"
+            ),
+            
+            # Graphs section
+            dbc.Row([
+                dbc.Col(
+                    dcc.Graph(
+                        figure=generate_pie_chart(result),
+                    ),
+                    xs=12, sm=12, md=6, lg=6
+                ),
+                dbc.Col(
+                    dcc.Graph(
+                        figure=create_nested_pie_chart(result),
+                    ),
+                    xs=12, sm=12, md=6, lg=6
+                ),
+                dbc.Col(
+                    dcc.Loading(
+                        children=dcc.Graph(
+                            id=f'heatmap-{result["intitule_formation"]}',
+                            figure=generate_heatmap(dfJson, formation=result, annee=selected_year),
+                            style={'height': '700px'}
+                        ) if generate_heatmap(dfJson, formation=result, annee=selected_year)
+                        else html.P("Données non disponibles pour la heatmap", 
+                                className="text-muted text-center py-4"),
+                        type="default"
+                    ),
+                    width=12
+                )
+            ], className='mb-4'),
+            dbc.Row([
+                dbc.Col(
+                    dcc.Loading(
+                        children=dcc.Graph(
+                            figure=generate_gender_metrics(result),
+                            style={'height': '800px'}
+                        ),
+                        type="default"
+                    ),
+                    width=12
+                )
+            ], className='mb-4'),
+  
+        ]
+
+        # Create tab for this formation
+        formation_tabs.append(
+            dcc.Tab(
+                label=result['intitule_formation'],
+                value=f"tab-{result['intitule_formation']}",
+                children=html.Div(tab_content, className='p-4'),
+            )
+        )
+
+    # Combine header and tabs
+    layout = html.Div([
+        # Header section
+        html.Div(header, className='mb-4'),
+        
+        # Tabs section
+        dcc.Tabs(
+            id='formation-tabs',
+            value=f"tab-{data['results'][0]['intitule_formation']}", # Set first tab as default
+            children=formation_tabs,
+            className='custom-tabs'
+        )
+    ])
+
+    return layout
 
 if __name__ == "__main__":
     geojson_file_path = "./data/raw/fr-esr-cartographie_formations_parcoursup.geojson"

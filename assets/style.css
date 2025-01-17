@@ -14,3 +14,23 @@ body {
     width: 100%;
     max-width: 100%;
 }
+
+
+.custom-tabs {
+  border-bottom: 1px solid #d6d6d6;
+}
+
+.custom-tabs .tab {
+  padding: 12px 24px;
+}
+
+.custom-tabs .tab--selected {
+  border-top: 2px solid #119DFF;
+  box-shadow: none;
+}
+
+.custom-tabs .tab-content {
+  padding: 16px;
+  border: 1px solid #d6d6d6;
+  border-top: none;
+}
