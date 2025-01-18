@@ -14,21 +14,6 @@ def create_footer() -> Component:
             html.P(
                 "© 2025 Visualisation Parcoursup - Laura LEROY & Lauriane COTOR",
                 style={"font-size": "14px", "margin": "0"}
-            ),
-            html.Div(
-                children=[
-                    html.A(
-                        "Mentions légales",
-                        href="#",
-                        style={"margin-right": "15px", "text-decoration": "none", "color": "#007bff"}
-                    ),
-                    html.A(
-                        "Contactez-nous",
-                        href="mailto:contact@example.com",
-                        style={"text-decoration": "none", "color": "#007bff"}
-                    ),
-                ],
-                style={"margin-top": "10px"}
             )
         ],
         style={

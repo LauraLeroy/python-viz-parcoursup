@@ -25,7 +25,13 @@ def generate_pie_chart(result: Dict[str, Union[int, str]]) -> go.Figure:
     fig = px.pie(
         names=labels,
         values=values,
-        title=f"Répartition des mentions au bac des admis pour la formation {result['intitule_formation']}"
+        title=f"Répartition des mentions au bac des admis pour la formation"
+    )
+    fig.update_layout(
+        title={
+            'font': {'size': 12},
+        },
+        margin=dict(t=40, b=40, l=40, r=40),
     )
     return fig
 
@@ -102,8 +108,10 @@ def create_nested_pie_chart(data: Dict[str, int]) -> go.Figure:
     ))
 
     fig.update_layout(
-        title="Répartition des candidats, propositions et admis par type de bac",
-        margin=dict(t=40, l=0, r=0, b=0),
+        title={
+            'text': "Répartition des candidats, propositions et admis par type de bac",
+            'font': {'size': 12}
+        },
     )
 
     return fig
@@ -166,58 +174,43 @@ def generate_heatmap(df: pd.DataFrame, formation: str, annee: int) -> Optional[g
     return fig
 
 
-def generate_gender_metrics(formation_data: Dict[str, Union[int, str]]) -> go.Figure:
-    """Genère deux grahiques pour analyser la répartition femmes/hommes des candidatures et des admissions
+def generate_gender_metrics(formation_data: Dict[str, Union[int, str]]) -> tuple:
+    """Genère deux graphiques pour analyser la répartition femmes/hommes des candidatures et des admissions
         Args: 
         formation_data (Dict[str, Union[int, str]]): Les données de la formation à analyser
 
-        returns:
-        go.Figure: Les graphiques
+        Returns:
+        tuple: Deux objets go.Figure (un pour chaque graphique)
     """
-    fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=(
-            "Répartition par genre des candidatures et admissions",
-            "Évolution du ratio femmes/hommes"
-        ),
-        specs=[[
-            {"type": "sunburst"}, {"type": "bar"}
-        ]]
-    )
+    # Première figure (Sunburst)
+    fig1 = go.Figure(go.Sunburst(
+        labels=['Total', 'Femmes', 'Hommes', 'Femmes Admis', 'Hommes Admis'],
+        parents=['', 'Total', 'Total', 'Femmes', 'Hommes'],
+        values=[
+            formation_data['effectif_total_candidat'],
+            formation_data['effectif_total_candidat_femme'],
+            formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
+            formation_data['acceptation_total_f'],
+            formation_data['acceptation_total'] - formation_data['acceptation_total_f']
+        ],
+        branchvalues='total',
+        hovertemplate="<b>%{label}</b><br>Count: %{value}<extra></extra>"
+    ))
 
-    labels = ['Total', 'Femmes', 'Hommes', 'Femmes Admis', 'Hommes Admis']
-    parents = ['', 'Total', 'Total', 'Femmes', 'Hommes']
-    values = [
-        formation_data['effectif_total_candidat'],
-        formation_data['effectif_total_candidat_femme'],
-        formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
-        formation_data['acceptation_total_f'],
-        formation_data['acceptation_total'] - formation_data['acceptation_total_f']
-    ]
+    # Deuxième figure (Bar chart)
+    fig2 = go.Figure()
 
-    fig.add_trace(
-        go.Sunburst(
-            labels=labels,
-            parents=parents,
-            values=values,
-            branchvalues='total',
-            hovertemplate="<b>%{label}</b><br>Count: %{value}<extra></extra>"
-        ),
-        row=1, col=1
-    )
-
-    fig.add_trace(
+    fig2.add_trace(
         go.Bar(
             name='Femmes',
             x=['Candidatures', 'Admissions'],
             y=[formation_data['effectif_total_candidat_femme'], formation_data['acceptation_total_f']],
             textposition='auto',
             marker_color='#FF69B4',
-        ),
-        row=1, col=2
+        )
     )
 
-    fig.add_trace(
+    fig2.add_trace(
         go.Bar(
             name='Hommes',
             x=['Candidatures', 'Admissions'],
@@ -227,17 +220,37 @@ def generate_gender_metrics(formation_data: Dict[str, Union[int, str]]) -> go.Fi
             ],
             textposition='auto',
             marker_color='#4169E1',
-        ),
-        row=1, col=2
+        )
     )
 
-    fig.update_layout(
-        title=f"Analyse de la répartition femmes/hommes - {formation_data['intitule_formation']}",
+    fig2.update_layout(
         barmode='group',
-        height=600,
+        height=400,
     )
 
-    return fig
+    # Mise à jour de la première figure pour la rendre responsive
+    fig1.update_layout(
+        title={
+            'text': "Répartition femmes/hommes des candidatures et admissions",
+            'font': {'size': 12}
+        },
+        height=600,
+        margin=dict(t=30, b=30, l=30, r=30),
+        autosize=True,
+    )
+
+    # Mise à jour de la deuxième figure pour la rendre responsive
+    fig2.update_layout(
+        title={
+            'text': "Évolution du ratio femmes/hommes",
+            'font': {'size': 12}
+        },
+        height=400,
+        margin=dict(t=30, b=30, l=30, r=30),
+        autosize=True,
+    )
+
+    return fig1, fig2
 
 
 def generate_double_bar_chart(df: pd.DataFrame, selected_formation: str, selected_year: int) -> go.Figure:

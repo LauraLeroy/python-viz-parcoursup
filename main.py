@@ -250,17 +250,19 @@ def fetch_api_data(feature: dict, selected_year:int) -> html.Div:
                 ),
             ], className='mb-4'),
             dbc.Row([
-                dbc.Col(
-                    dcc.Loading(
-                        children=dcc.Graph(
-                            figure=generate_gender_metrics(result),
-                            style={'height': '800px'}
-                        ),
-                        type="default"
-                    ),
-                    width=12
-                )
-            ], className='mb-4'),
+    dbc.Col(
+        dcc.Graph(
+            figure=generate_gender_metrics(result)[0],  # First figure (Sunburst chart)
+        ),
+        xs=12, sm=12, md=6, lg=6  # Full width on small screens, 50% width on medium and larger screens
+    ),
+    dbc.Col(
+        dcc.Graph(
+            figure=generate_gender_metrics(result)[1],  # Second figure (Bar chart)
+        ),
+        xs=12, sm=12, md=6, lg=6  # Full width on small screens, 50% width on medium and larger screens
+    ),
+], className='mb-4')
   
         ]
 
