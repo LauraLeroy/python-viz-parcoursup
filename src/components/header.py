@@ -1,6 +1,13 @@
 from dash import html
+from dash.development.base_component import Component
 
-def create_header():
+def create_header() -> Component:
+    """
+    Crée un header pour la page d'accueil dash
+
+    Returns:
+        Component: Un composant Dash (html) représentant le header.
+    """
     return html.Div(
         className="header",
         children=[

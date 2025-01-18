@@ -1,9 +1,19 @@
+from typing import Dict, Union, Optional
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from src.utils.fuzzy_word import categorize
 from plotly.subplots import make_subplots
 
-def generate_pie_chart(result):
+
+def generate_pie_chart(result: Dict[str, Union[int, str]]) -> go.Figure:
+    """Genère un graphique en camembert pour la répartition des mentions au bac des admis pour une formation donnée
+        Args:
+        result (Dict[str, int]): Le dictionnaire de données  à utiliser déjà filtré par année et formation
+
+        Returns:
+        Optional[go.Figure]: Le graphique
+    """
+
     labels = ['Sans Mention', 'Mention AB', 'Mention B', 'Mention TB', 'Mention TBF']
     values = [
         result['effectif_admis_mention_aucune'],
@@ -19,8 +29,20 @@ def generate_pie_chart(result):
     )
     return fig
 
-def create_nested_pie_chart(data):
-    # Extraction des données de base
+
+def create_nested_pie_chart(data: Dict[str, int]) -> go.Figure:
+    """Genère un graphique en camembert imbriqué pour la répartition des candidats, propositions et admis par type de bac 
+        BG: Bagéalaureat général
+        BT: Baccalauréat technologique
+        BP: Baccalauréat professionnel
+        Autre: Autres types de baccalauréat ou formation
+
+        Args:
+        data (Dict[str, int]): Le dictionnaire de données  à utiliser déjà filtré par année et formation
+
+        Returns:
+        Optional[go.Figure]: Le graphique
+    """
     candidats = [
         data['effectif_total_candidat_bg_pp'],
         data['effectif_total_candidat_bt_pp'],
@@ -40,9 +62,8 @@ def create_nested_pie_chart(data):
         data['effectif_admis_at'],
     ]
 
-    # Calcul des catégories opposées proposition vs refusés, admis vs voeux non accepté
-    refuses = [max(c - p, 0) for c, p in zip(candidats, propositions)]  # Refusé
-    voeux_non_acceptes = [max(p - a, 0) for p, a in zip(propositions, admis)]  # Vœux non acceptés
+    refuses = [max(c - p, 0) for c, p in zip(candidats, propositions)]
+    voeux_non_acceptes = [max(p - a, 0) for p, a in zip(propositions, admis)]
 
     labels = [
         "Candidats BG", "Propositions BG", "Admis BG", "Vœux non acceptés BG", "Refusé BG",
@@ -51,46 +72,35 @@ def create_nested_pie_chart(data):
         "Candidats Autres", "Propositions Autres", "Admis Autres", "Vœux non acceptés Autres", "Refusé Autres",
     ]
 
-    # Définition des parents pour la hiérarchie
     parents = [
-        "", "Candidats BG", "Propositions BG", "Propositions BG", "Candidats BG",  # BG
-        "", "Candidats BT", "Propositions BT", "Propositions BT", "Candidats BT",  # BT
-        "", "Candidats BP", "Propositions BP", "Propositions BP", "Candidats BP",  # BP
-        "", "Candidats Autres", "Propositions Autres", "Propositions Autres", "Candidats Autres",  # Autres
+        "", "Candidats BG", "Propositions BG", "Propositions BG", "Candidats BG",
+        "", "Candidats BT", "Propositions BT", "Propositions BT", "Candidats BT",
+        "", "Candidats BP", "Propositions BP", "Propositions BP", "Candidats BP",
+        "", "Candidats Autres", "Propositions Autres", "Propositions Autres", "Candidats Autres",
     ]
 
     values = [
-        candidats[0], propositions[0], admis[0], voeux_non_acceptes[0], refuses[0],  # BG
-        candidats[1], propositions[1], admis[1], voeux_non_acceptes[1], refuses[1],  # BT
-        candidats[2], propositions[2], admis[2], voeux_non_acceptes[2], refuses[2],  # BP
-        candidats[3], propositions[3], admis[3], voeux_non_acceptes[3], refuses[3],  # Autres
+        candidats[0], propositions[0], admis[0], voeux_non_acceptes[0], refuses[0],
+        candidats[1], propositions[1], admis[1], voeux_non_acceptes[1], refuses[1],
+        candidats[2], propositions[2], admis[2], voeux_non_acceptes[2], refuses[2],
+        candidats[3], propositions[3], admis[3], voeux_non_acceptes[3], refuses[3],
     ]
 
     colors = [
-        "#1B4965", "#0081A7", "#00AFB9", "#62B6CB", "#BEE9E8",  # BG  --> Candidats, Propositions, Admis, Vœux non acceptés, Refusé, 
-        "#FF7B00", "#FF9500", "#FFA200", "#FFB700", "#FF8800",  # BT
-        "#55753C", "#96BE8C", "#ACECA1", "#C9F2C7", "#629460",  # BP
-        "#6E0D0D", "#F73E3E", "#A81111", "#FF7777", "#DE1021",  # Autres
+        "#1B4965", "#0081A7", "#00AFB9", "#62B6CB", "#BEE9E8",
+        "#FF7B00", "#FF9500", "#FFA200", "#FFB700", "#FF8800",
+        "#55753C", "#96BE8C", "#ACECA1", "#C9F2C7", "#629460",
+        "#6E0D0D", "#F73E3E", "#A81111", "#FF7777", "#DE1021",
     ]
-    
-    shape=dict(
-        shape=[
-            "", "", "", "/", "/",  # BG
-            "", "", "", "/", "/",  # BT
-            "", "", "", "/", "/",  # BP
-            "", "", "", "/", "/",  # Autres
-        ],
-        solidity=0.9)
 
     fig = go.Figure(go.Sunburst(
         labels=labels,
         parents=parents,
         values=values,
-        branchvalues="total",  # Les parents incluent les enfants
-        marker=dict(colors=colors,pattern=shape)
+        branchvalues="total",
+        marker=dict(colors=colors)
     ))
 
-    # Mise en forme de la figure
     fig.update_layout(
         title="Répartition des candidats, propositions et admis par type de bac",
         margin=dict(t=40, l=0, r=0, b=0),
@@ -98,26 +108,34 @@ def create_nested_pie_chart(data):
 
     return fig
 
-def generate_heatmap(df, formation, annee):
-    # Filtrer les données par formation et année
-    df_filtered = df[df["annee_du_bac"] == annee]
+
+def generate_heatmap(df: pd.DataFrame, formation: str, annee: int) -> Optional[go.Figure]:
+    """Génère un heatmap du nombre de propositions d'admission par doublette de spécialités pour une formation et une année données
+
+    Args:
+        df (pd.DataFrame): le dataframe contenant les données
+        formation (str): la formation choisie dans le sélecteur
+        annee (int): l'année choisie 
+
+    Returns:
+        Optional[go.Figure]: Le graphique ou none si aucune donnée n'est trouvée
+    """
     df_filtered = df[(df["formation"] == formation) & (df["annee_du_bac"] == annee)].copy()
     if df_filtered.empty:
         return None
-    
+
     df_filtered["spe1"] = df_filtered["doublette"].apply(lambda x: x[0])
     df_filtered["spe2"] = df_filtered["doublette"].apply(lambda x: x[1])
-    
+
     pivot_table = df_filtered.pivot_table(
-        index="spe2", 
-        columns="spe1", 
-        values="propositions_d_admissions", 
+        index="spe2",
+        columns="spe1",
+        values="propositions_d_admissions",
         aggfunc="sum",
         fill_value=0
     )
-    
-    # Normalisation par rapport à la valeur maximale
-    max_value = pivot_table.max().max()  # Trouver la valeur maximale dans le tableau
+
+    max_value = pivot_table.max().max()
     pivot_table_percentage = (pivot_table / max_value) * 100
 
     fig = px.imshow(
@@ -129,52 +147,44 @@ def generate_heatmap(df, formation, annee):
         },
         title=f"Répartition des propositions d'admission ({formation} - {annee})",
         color_continuous_scale="Portland",
-        text_auto=".2f",  # Formater les valeurs en pourcentage avec 2 décimales
-        zmin=0,  # Définir le minimum de l'échelle de couleur à 0%
-        zmax=100,  # Définir le maximum de l'échelle de couleur à 100%
-        range_color=[0, 100]
+        text_auto=".2f",
+        zmin=0,
+        zmax=100,
     )
+
     fig.update_layout(
-        xaxis_title="Spécialité 1", 
+        xaxis_title="Spécialité 1",
         yaxis_title="Spécialité 2",
-        autosize=True,
-        height=700,  # Set a fixed minimum height
-        margin=dict(
-            l=150,    # Increased left margin for y-axis labels
-            r=50,
-            t=100,    # Increased top margin for title
-            b=150     # Increased bottom margin for x-axis labels
-        ),
-        coloraxis_colorbar=dict(
-            tickformat=".0%",  # Formater les ticks de la barre en pourcentage
-            title="Pourcentage"
-        ),
+        height=700,
+        margin=dict(l=150, r=50, t=100, b=150),
+        coloraxis_colorbar=dict(tickformat=".0%", title="Pourcentage"),
     )
-    fig.update_xaxes(tickangle=45, tickfont=dict(size=10),automargin=True)  # Labels de l'axe X inclinés à 45°
-    fig.update_yaxes(tickangle=0, tickfont=dict(size=10),automargin=True)  # Labels de l'axe Y laissés verticaux
+
+    fig.update_xaxes(tickangle=45, tickfont=dict(size=10), automargin=True)
+    fig.update_yaxes(tickangle=0, tickfont=dict(size=10), automargin=True)
 
     return fig
 
-def generate_gender_metrics(formation_data):
+
+def generate_gender_metrics(formation_data: Dict[str, Union[int, str]]) -> go.Figure:
+    """Genère deux grahiques pour analyser la répartition femmes/hommes des candidatures et des admissions
+        Args: 
+        formation_data (Dict[str, Union[int, str]]): Les données de la formation à analyser
+
+        returns:
+        go.Figure: Les graphiques
     """
-    Generate visualizations focusing on gender distribution in formation data.
-    
-    Args:
-        formation_data (dict): Data for a single formation.
-    """
-    # Create figure with 1 row and 2 columns
     fig = make_subplots(
         rows=1, cols=2,
         subplot_titles=(
             "Répartition par genre des candidatures et admissions",
             "Évolution du ratio femmes/hommes"
         ),
-        specs=[
-            [{"type": "sunburst"}, {"type": "bar"}]
-        ]
+        specs=[[
+            {"type": "sunburst"}, {"type": "bar"}
+        ]]
     )
-    
-    # 1. Combined Sunburst Chart for Candidatures and Admissions
+
     labels = ['Total', 'Femmes', 'Hommes', 'Femmes Admis', 'Hommes Admis']
     parents = ['', 'Total', 'Total', 'Femmes', 'Hommes']
     values = [
@@ -191,88 +201,79 @@ def generate_gender_metrics(formation_data):
             parents=parents,
             values=values,
             branchvalues='total',
-            name="Répartition par genre",
             hovertemplate="<b>%{label}</b><br>Count: %{value}<extra></extra>"
         ),
         row=1, col=1
     )
-    
-    # 2. Évolution du ratio femmes/hommes (Bar chart for absolute counts)
+
     fig.add_trace(
         go.Bar(
             name='Femmes',
             x=['Candidatures', 'Admissions'],
             y=[formation_data['effectif_total_candidat_femme'], formation_data['acceptation_total_f']],
-            text=[formation_data['effectif_total_candidat_femme'], formation_data['acceptation_total_f']],
             textposition='auto',
             marker_color='#FF69B4',
-            hovertemplate="Femmes<br>%{x}: %{y}<extra></extra>"
         ),
         row=1, col=2
     )
-    
+
     fig.add_trace(
         go.Bar(
             name='Hommes',
             x=['Candidatures', 'Admissions'],
-            y=[formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
-               formation_data['acceptation_total'] - formation_data['acceptation_total_f']],
-            text=[formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
-                  formation_data['acceptation_total'] - formation_data['acceptation_total_f']],
+            y=[
+                formation_data['effectif_total_candidat'] - formation_data['effectif_total_candidat_femme'],
+                formation_data['acceptation_total'] - formation_data['acceptation_total_f']
+            ],
             textposition='auto',
             marker_color='#4169E1',
-            hovertemplate="Hommes<br>%{x}: %{y}<extra></extra>"
         ),
         row=1, col=2
     )
-    
-    # Update layout
+
     fig.update_layout(
-        title={
-            'text': f"Analyse de la répartition femmes/hommes - {formation_data['intitule_formation']}",
-            'y': 0.95,
-            'x': 0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'
-        },
-        showlegend=True,
+        title=f"Analyse de la répartition femmes/hommes - {formation_data['intitule_formation']}",
+        barmode='group',
         height=600,
-        template='plotly_white',
-        barmode='group'
     )
-    
+
     return fig
 
-def generate_double_bar_chart(df, selected_formation, selected_year):
-    # Filtrer les données
-    filtered_df = df[(df['annee_du_bac'] == selected_year) & 
-                     (df['formation'] == selected_formation)]
-    
-    # Transformer les données
+
+def generate_double_bar_chart(df: pd.DataFrame, selected_formation: str, selected_year: int) -> go.Figure:
+    """Génère un graphique à barres comparant les voeux et les propositions d'admission pour une formation et une année données
+
+    Args:
+        df (pd.DataFrame): Le dataframe contenant les données
+        selected_formation (str): La formation choisie dans le sélecteur
+        selected_year (int): l'année choisie
+
+    Returns:
+        go.Figure: Le graphique
+    """
+    filtered_df = df[(df['annee_du_bac'] == selected_year) & (df['formation'] == selected_formation)]
+
     melted_df = filtered_df.melt(
         id_vars=['couple_specialites'],
         value_vars=['voeux', 'propositions_d_admissions'],
         var_name='Légende',
         value_name='Valeur'
     )
-    
-    # Créer le graphique avec les axes inversés
+
     fig = px.bar(
         melted_df,
-        x='couple_specialites',  # Inversement des axes
+        x='couple_specialites',
         y='Valeur',
         color='Légende',
         barmode='group',
         title=f"Comparaison des voeux et propositions pour l'année {selected_year}"
     )
-    
-    # Mise à jour de la mise en page
+
     fig.update_layout(
-        xaxis_title="Duo de spécialités",  # Axe X devient duo de spécialités
+        xaxis_title="Duo de spécialités",
         yaxis_title="Nombre de candidats",
     )
-    
-    # Retirer les labels sur l'axe X
+
     fig.update_xaxes(showticklabels=False)
-    
+
     return fig

@@ -2,6 +2,7 @@ import dash_bootstrap_components as dbc
 from dash import html
 
 def create_institution_card(data):
+    """Créee une carte Bootstrap pour afficher les informations de l'établissement"""
     # Main info card
     institution_card = dbc.Card(
         [
@@ -55,12 +56,11 @@ def create_institution_card(data):
     return institution_card
 
 def create_info_item(label, value, icon, full_width=False):
-    """Helper function to create consistently styled info items with icons"""
+    """Un helper pour créer un élément d'information stylisé"""
     return html.Div(
         [
             html.P(
                 [
-                    html.I(className=f"bi bi-{icon} me-2"),  # Bootstrap icon
                     html.Span(label, className="fw-bold me-2"),
                     html.Span(value),
                 ],

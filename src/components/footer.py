@@ -1,6 +1,13 @@
 from dash import html
+from dash.development.base_component import Component
 
-def create_footer():
+def create_footer() -> Component:
+    """
+    Crée un footer pour la page d'accueil dash
+
+    Returns:
+    Component: Un composant Dash (html) représentant le footer (pied de page).
+    """
     return html.Div(
         className="footer",
         children=[

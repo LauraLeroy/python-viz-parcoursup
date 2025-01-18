@@ -1,7 +1,9 @@
 import json
+from typing import List, Dict, Any
 
-def fetch_data_from_geojson(file_path, year):
+def fetch_data_from_geojson(file_path: str, year: int) -> List[Dict[str, Any]]:
     """ Récupère les données du GeoJSON pour une année donnée, en regroupant les formations par établissement """
+    
     print(f"Chargement des données depuis le fichier GeoJSON : {file_path}...")
 
     with open(file_path, 'r', encoding='utf-8') as file:
