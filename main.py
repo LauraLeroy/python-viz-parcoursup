@@ -90,15 +90,18 @@ app.layout = html.Div([
                     placeholder="Sélectionnez une formation",
                 ),
                 # Graphique
-                dcc.Graph(
-                    id='bar-chart',
-                    figure={},  # Initialement vide
+                dcc.Loading(
+                    dcc.Graph(
+                        id='bar-chart',
+                        figure={},  # Initialement vide
+                    ),
                 ),
-                dcc.Graph(
-                    id='heatmap',
-                    figure={},  # Initialement vide
+                dcc.Loading(
+                    dcc.Graph(
+                        id='heatmap',
+                        figure={},  # Initialement vide
+                    ),
                 ),
-
             ], width={"size": 10, "offset": 1})  # Centered results
         ])
     ], fluid=False),  # Using fixed-width container
