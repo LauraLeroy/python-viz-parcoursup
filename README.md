@@ -1,7 +1,7 @@
 # User Guide
 
-Foobar is a Python library for dealing with word pluralization.
-
+Pour installer les différentes dépendances, aller dans votre environement virtuel (dossier .venv généralement) et activer le avec la commande .\Scripts\activate (Windows) ou  source venv/Scripts/activate (Linux).
+Ensuite exécutez la commande pip install -r requirement.txt.
 ## Data
 
 Les données utilisées provienne de la plateforme DataGouv et plus précisémment de EnseignementSup OpenData géré par le ministère de l'enseignement supérieur et de la recherche.

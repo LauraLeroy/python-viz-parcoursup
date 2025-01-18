@@ -1,16 +1,14 @@
-import os
-import sys
 import pandas as pd
-from dash import Dash, html, dcc, Input, Output, ctx, ALL
+from dash import Dash, html, dcc, Input, Output
 from flask_caching import Cache
 import dash_leaflet as dl
 import dash_bootstrap_components as dbc
-import json
 import requests
-import plotly.express as px
+
+#import modules from src
+from src.components.cards import create_institution_card
 from src.components.map import fetch_data_from_geojson
 from src.components.graphs import generate_pie_chart, create_nested_pie_chart, generate_heatmap, generate_gender_metrics, generate_double_bar_chart
-
 from src.components.header import create_header
 from src.components.footer import create_footer
 
@@ -18,18 +16,17 @@ from src.components.footer import create_footer
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # Configuration du cache
 cache = Cache(app.server, config={'CACHE_TYPE': 'simple'})
+
 geojson_file_path = "./data/raw/fr-esr-cartographie_formations_parcoursup.geojson"
 spe_json_file_path = "./data/raw/fr-esr-parcoursup-enseignements-de-specialite-bacheliers-generaux-2.json"
 dfJson = pd.read_json(spe_json_file_path, encoding='utf-8')
-
 dfJson["couple_specialites"] = dfJson["doublette"].apply(lambda x: f"{x[0]}, {x[1]}")
-specialites = dfJson["couple_specialites"] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
+
+specialites = dfJson["couple_specialites"]
 specialites = specialites.unique()
-
-formations = dfJson['formation'] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
+formations = dfJson['formation']
 formations = formations.unique()
-
-annees = dfJson['annee_du_bac'] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
+annees = dfJson['annee_du_bac']
 annees = annees.unique()
 
 # Layout de l'application
@@ -238,14 +235,22 @@ def fetch_api_data(feature, selected_year):
         return html.P("Aucune information disponible pour cet établissement.")
 
     # Header information
-    header = [
-        html.H3(f"Détails de l'établissement {data['nom_etab']}"),
-        html.P(f"Session: {data['session']}"),
-        html.P(f"Académie: {data['academie']}"),
-        html.P(f"Ville: {data['ville']}"),
-        html.P(f"Département: {data['dep_lib'] + '-' + data['dep']}"),
-        html.P(f"Région: {data['region']}"),
-    ]
+    header = html.Div(
+    [
+        dbc.Container(
+            [
+                dbc.Row(
+                    dbc.Col(
+                        create_institution_card(data),
+                        width={"size": 10, "offset": 1},
+                        lg={"size": 8, "offset": 2}
+                    )
+                )
+            ],
+            fluid=True,
+            className="py-4"
+        )
+    ])
 
     if "results" not in data or len(data["results"]) == 0:
         return html.Div(header + [html.P("Aucune information disponible pour cet établissement.")])
