@@ -101,13 +101,10 @@ def create_nested_pie_chart(data):
 def generate_heatmap(df, formation, annee):
     # Filtrer les données par formation et année
     df_filtered = df[df["annee_du_bac"] == annee]
-
-    value_index_map = {row["formation"]: index for index, row in df_filtered.iterrows()}
-    processed_formation = categorize(formation['intitule_formation'], formation['form_lib_voe_acc'], value_index_map)
-    df_filtered = df[(df["formation"] == processed_formation) & (df["annee_du_bac"] == annee)].copy()
+    df_filtered = df[(df["formation"] == formation) & (df["annee_du_bac"] == annee)].copy()
     if df_filtered.empty:
         return None
-
+    
     df_filtered["spe1"] = df_filtered["doublette"].apply(lambda x: x[0])
     df_filtered["spe2"] = df_filtered["doublette"].apply(lambda x: x[1])
     
@@ -130,7 +127,7 @@ def generate_heatmap(df, formation, annee):
             "y": "Spécialité 2 (Axe Y)",
             "color": "Pourcentage (%)"
         },
-        title=f"Répartition des propositions d'admission ({formation['intitule_formation']} - {annee})",
+        title=f"Répartition des propositions d'admission ({formation} - {annee})",
         color_continuous_scale="Portland",
         text_auto=".2f",  # Formater les valeurs en pourcentage avec 2 décimales
         zmin=0,  # Définir le minimum de l'échelle de couleur à 0%
@@ -155,9 +152,7 @@ def generate_heatmap(df, formation, annee):
     )
     fig.update_xaxes(tickangle=45, tickfont=dict(size=10),automargin=True)  # Labels de l'axe X inclinés à 45°
     fig.update_yaxes(tickangle=0, tickfont=dict(size=10),automargin=True)  # Labels de l'axe Y laissés verticaux
-    
-    # fig.update_xaxes(ticktext=[textwrap.fill(label, width=15) for label in pivot_table.columns])
-    # fig.update_yaxes(ticktext=[textwrap.fill(label, width=15) for label in pivot_table.index])
+
     return fig
 
 def generate_gender_metrics(formation_data):
@@ -244,6 +239,35 @@ def generate_gender_metrics(formation_data):
         height=600,
         template='plotly_white',
         barmode='group'
+    )
+    
+    return fig
+
+def generate_double_bar_chart(df,selected_formation,selected_year):
+    
+    ### filtre pour les données du graphique
+    filtered_df = df[(df['annee_du_bac'] == selected_year) &
+        (df['formation'] == selected_formation)]
+    
+    melted_df = filtered_df.melt( # création d'une nouvelle colonne "Légende" avec la conversion des colonnes en lignes
+        id_vars=['couple_specialites'], 
+        value_vars=['voeux', 'propositions_d_admissions'],
+        var_name='Légende', 
+        value_name='Valeur'
+    )
+    
+    fig = px.bar(
+        melted_df, 
+        x='Valeur', 
+        y='couple_specialites', 
+        color='Légende', 
+        barmode ='group', 
+        title=f"Comparaison des voeux et propositions pour l'année {selected_year}"
+    )
+    
+    fig.update_layout(
+        xaxis_title="Nombre de candidats",
+        yaxis_title="Duo de spécialités",
     )
     
     return fig

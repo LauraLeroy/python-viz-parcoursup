@@ -6,18 +6,14 @@ df = pd.read_json("./data/raw/fr-esr-parcoursup-enseignements-de-specialite-bach
 
 df["couple_specialites"] = df["doublette"].apply(lambda x: f"{x[0]}, {x[1]}")
 specialites = df["couple_specialites"] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
-type(specialites)
 specialites = specialites.unique()
 
 formations = df['formation'] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
-type(formations)
 formations = formations.unique()
 
 ###suppression la colonne doublette
 df = df.drop(columns=["doublette"])
-
 annees = df['annee_du_bac'] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
-type(annees)
 annees = annees.unique()
 
 ### Initialisation de l'app

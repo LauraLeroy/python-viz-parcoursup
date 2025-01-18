@@ -7,7 +7,7 @@ import dash_leaflet as dl
 import dash_bootstrap_components as dbc
 import json
 import requests
-
+import plotly.express as px
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'pages')))
@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', '
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'utils')))
 
 from src.components.map import fetch_data_from_geojson
-from src.components.graphs import generate_pie_chart, create_nested_pie_chart, generate_heatmap, generate_gender_metrics
+from src.components.graphs import generate_pie_chart, create_nested_pie_chart, generate_heatmap, generate_gender_metrics, generate_double_bar_chart
 
 from src.components.header import create_header
 from src.components.footer import create_footer
@@ -24,6 +24,19 @@ from src.components.footer import create_footer
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # Configuration du cache
 cache = Cache(app.server, config={'CACHE_TYPE': 'simple'})
+geojson_file_path = "./data/raw/fr-esr-cartographie_formations_parcoursup.geojson"
+spe_json_file_path = "./data/raw/fr-esr-parcoursup-enseignements-de-specialite-bacheliers-generaux-2.json"
+dfJson = pd.read_json(spe_json_file_path, encoding='utf-8')
+
+dfJson["couple_specialites"] = dfJson["doublette"].apply(lambda x: f"{x[0]}, {x[1]}")
+specialites = dfJson["couple_specialites"] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
+specialites = specialites.unique()
+
+formations = dfJson['formation'] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
+formations = formations.unique()
+
+annees = dfJson['annee_du_bac'] #🚨le nom entre " " doit être identique au nom de la colonne du tableau
+annees = annees.unique()
 
 # Layout de l'application
 app.layout = html.Div([
@@ -75,11 +88,60 @@ app.layout = html.Div([
                 html.Div(id="api-result-container")
             ], width={"size": 10, "offset": 1})  # Centered results
         ]),
+        
+        dbc.Row([
+            dbc.Col([
+                dcc.Dropdown(
+                    id='formation-dropdown',
+                    options=[{'label': formation, 'value': formation} for formation in formations],
+                    value=formations[0],  # Valeur par défaut
+                    placeholder="Sélectionnez une formation",
+                ),
+
+                # Slider pour sélectionner une année
+                dcc.Slider(
+                    id='year-slider',
+                    min=dfJson['annee_du_bac'].min(),
+                    max=dfJson['annee_du_bac'].max(),
+                    step=1,
+                    marks={str(year): str(year) for year in dfJson['annee_du_bac'].unique()},
+                    value=dfJson['annee_du_bac'].min(),  # Valeur par défaut
+                ),
+
+                # Graphique
+                dcc.Graph(
+                    id='bar-chart',
+                    figure={},  # Initialement vide
+                ),
+                dcc.Graph(
+                    id='heatmap',
+                    figure={},  # Initialement vide
+                ),
+
+            ], width={"size": 10, "offset": 1})  # Centered results
+        ])
     ], fluid=False),  # Using fixed-width container
-    
     create_footer()
 ])
 
+@app.callback(
+    [
+        Output('bar-chart', 'figure'),
+        Output('heatmap', 'figure'),
+    ],
+    [
+        Input('formation-dropdown', 'value'),
+        Input('year-slider', 'value'),
+    ]
+)
+def update_graphs(selected_formation, selected_year):
+    # Mettre à jour le graphique en barres
+    bar_chart_figure = generate_double_bar_chart(dfJson, selected_formation, selected_year)
+    
+    # Mettre à jour la heatmap
+    heatmap_figure = generate_heatmap(dfJson, selected_formation, selected_year)
+    
+    return bar_chart_figure, heatmap_figure
 
 # Callback pour mettre à jour les données GeoJSON en fonction de l'année
 @app.callback(
@@ -236,19 +298,19 @@ def fetch_api_data(feature, selected_year):
                     ),
                     xs=12, sm=12, md=6, lg=6
                 ),
-                dbc.Col(
-                    dcc.Loading(
-                        children=dcc.Graph(
-                            id=f'heatmap-{result["intitule_formation"]}',
-                            figure=generate_heatmap(dfJson, formation=result, annee=selected_year),
-                            style={'height': '700px'}
-                        ) if generate_heatmap(dfJson, formation=result, annee=selected_year)
-                        else html.P("Données non disponibles pour la heatmap", 
-                                className="text-muted text-center py-4"),
-                        type="default"
-                    ),
-                    width=12
-                )
+                # dbc.Col(
+                #     dcc.Loading(
+                #         children=dcc.Graph(
+                #             id=f'heatmap-{result["intitule_formation"]}',
+                #             figure=generate_heatmap(dfJson, formation=result, annee=selected_year),
+                #             style={'height': '700px'}
+                #         ) if generate_heatmap(dfJson, formation=result, annee=selected_year)
+                #         else html.P("Données non disponibles pour la heatmap", 
+                #                 className="text-muted text-center py-4"),
+                #         type="default"
+                #     ),
+                #     width=12
+                # )
             ], className='mb-4'),
             dbc.Row([
                 dbc.Col(
@@ -291,7 +353,5 @@ def fetch_api_data(feature, selected_year):
     return layout
 
 if __name__ == "__main__":
-    geojson_file_path = "./data/raw/fr-esr-cartographie_formations_parcoursup.geojson"
-    spe_json_file_path = "./data/raw/fr-esr-parcoursup-enseignements-de-specialite-bacheliers-generaux-2.json"
-    dfJson = pd.read_json(spe_json_file_path, encoding='utf-8')
+
     app.run_server(debug=False)
