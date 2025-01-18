@@ -237,6 +237,10 @@ def fetch_api_data(feature: dict, selected_year:int) -> html.Div:
             # Graphs section
             dbc.Row([
                 dbc.Col(
+                    html.P("Dans ce graphique, BT = bac technologique, BG = Bac générale et BP = bac professionnel"),
+                    xs=12, sm=12, md=12, lg=12
+                ),
+                dbc.Col(
                     dcc.Graph(
                         figure=generate_pie_chart(result),
                     ),

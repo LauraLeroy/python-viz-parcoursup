@@ -272,7 +272,7 @@ def generate_double_bar_chart(df: pd.DataFrame, selected_formation: str, selecte
         var_name='Légende',
         value_name='Valeur'
     )
-
+    
     fig = px.bar(
         melted_df,
         x='couple_specialites',
@@ -282,6 +282,12 @@ def generate_double_bar_chart(df: pd.DataFrame, selected_formation: str, selecte
         title=f"Comparaison des voeux et propositions pour l'année {selected_year}"
     )
 
+    newnames = {'voeux':'Voeux', 'propositions_d_admissions': 'Propositions d\'admission'}
+    fig.for_each_trace(lambda t: t.update(name = newnames[t.name],
+                                        legendgroup = newnames[t.name],
+                                        hovertemplate = t.hovertemplate.replace(t.name, newnames[t.name])
+                                        )
+    )
     fig.update_layout(
         xaxis_title="Duo de spécialités",
         yaxis_title="Nombre de candidats",
