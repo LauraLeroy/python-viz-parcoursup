@@ -1,7 +1,10 @@
+from typing import Dict, Any
 import dash_bootstrap_components as dbc
 from dash import html
 
-def create_institution_card(data):
+
+
+def create_institution_card(data: Dict[str, Any]) -> dbc.Card:
     """Créee une carte Bootstrap pour afficher les informations de l'établissement"""
     # Main info card
     institution_card = dbc.Card(
@@ -24,16 +27,16 @@ def create_institution_card(data):
                             # Left column
                             dbc.Col(
                                 [
-                                    create_info_item("Session", data['session'], "calendar"),
-                                    create_info_item("Académie", data['academie'], "book"),
+                                    create_info_item("Session", data['session']),
+                                    create_info_item("Académie", data['academie']),
                                 ],
                                 width=6,
                             ),
                             # Right column
                             dbc.Col(
                                 [
-                                    create_info_item("Ville", data['ville'], "geo-alt"),
-                                    create_info_item("Département", f"{data['dep_lib']} - {data['dep']}", "building"),
+                                    create_info_item("Ville", data['ville']),
+                                    create_info_item("Département", f"{data['dep_lib']} - {data['dep']}"),
                                 ],
                                 width=6,
                             ),
@@ -43,7 +46,7 @@ def create_institution_card(data):
                     # Region in a separate row for emphasis
                     dbc.Row(
                         dbc.Col(
-                            create_info_item("Région", data['region'], "map", True),
+                            create_info_item("Région", data['region'], True),
                             className="mt-3"
                         )
                     ),
@@ -55,7 +58,7 @@ def create_institution_card(data):
     
     return institution_card
 
-def create_info_item(label, value, icon, full_width=False):
+def create_info_item(label: str, value: str, full_width: bool = False) -> html.Div:
     """Un helper pour créer un élément d'information stylisé"""
     return html.Div(
         [

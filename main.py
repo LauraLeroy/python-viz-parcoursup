@@ -115,7 +115,7 @@ app.layout = html.Div([
         Input('year-slider', 'value'),
     ]
 )
-def update_graphs(selected_formation, selected_year):
+def update_graphs(selected_formation: str, selected_year: int) -> tuple:
     """Mettre à jour les graphiques du dataset formation par enseignement de spé en fonction de la formation et de l'année sélectionnées
 
     Args:
@@ -139,7 +139,7 @@ def update_graphs(selected_formation, selected_year):
     Input("year-slider", "value"),  # Récupère la valeur du slider
 )
 @cache.memoize(timeout=3600)  # Cache pendant 1 heure
-def update_geojson_data(annee_cible):
+def update_geojson_data(annee_cible: int) -> dict:
     """Mettre à jour les données GeoJSON en fonction de l'année cible
 
     Args:
@@ -179,7 +179,7 @@ def update_geojson_data(annee_cible):
      Input("year-slider", "value")],
     prevent_initial_call=True,
 )
-def fetch_api_data(feature, selected_year):
+def fetch_api_data(feature: dict, selected_year:int) -> html.Div:
     if not feature:
         return "Cliquez sur un marqueur pour voir les informations."
 

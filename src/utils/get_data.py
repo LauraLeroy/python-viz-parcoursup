@@ -1,8 +1,19 @@
-def process_api_response(response):
+from typing import Dict, Any
+from dash import html
 
-    if(not response and response["total_count"] == 0):
-        return []
+def process_api_response(response: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Traite la réponse de l'API pour extraire les données pertinentes.
     
+    Args:
+        response (Dict[str, Any]): La réponse JSON de l'API.
+        
+    Returns:
+        Dict[str, Any]: Les données extraites et transformées.
+    """
+    if(not response or response["total_count"] == 0 or response["results"] == []):
+        return html.P("Aucune donnée trouvée pour cette recherche.")
+
     data = {
         'total_count': response["results"][0],
         'etab_uai': response["results"][0].get('cod_uai', ''),
