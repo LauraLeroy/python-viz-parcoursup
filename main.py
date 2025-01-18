@@ -81,7 +81,9 @@ app.layout = html.Div([
             ], width={"size": 10, "offset": 1})  # Centered results
         ]),
         
-        dbc.Row([
+        dbc.Row([ 
+            html.Hr(),
+            html.P("Les deux graphiques suivants sont indépendants de la carte interactive, mais ils sont liés entre eux."),
             dbc.Col([
                 dcc.Dropdown(
                     id='formation-dropdown',
