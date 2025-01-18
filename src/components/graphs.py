@@ -243,31 +243,36 @@ def generate_gender_metrics(formation_data):
     
     return fig
 
-def generate_double_bar_chart(df,selected_formation,selected_year):
+def generate_double_bar_chart(df, selected_formation, selected_year):
+    # Filtrer les données
+    filtered_df = df[(df['annee_du_bac'] == selected_year) & 
+                     (df['formation'] == selected_formation)]
     
-    ### filtre pour les données du graphique
-    filtered_df = df[(df['annee_du_bac'] == selected_year) &
-        (df['formation'] == selected_formation)]
-    
-    melted_df = filtered_df.melt( # création d'une nouvelle colonne "Légende" avec la conversion des colonnes en lignes
-        id_vars=['couple_specialites'], 
+    # Transformer les données
+    melted_df = filtered_df.melt(
+        id_vars=['couple_specialites'],
         value_vars=['voeux', 'propositions_d_admissions'],
-        var_name='Légende', 
+        var_name='Légende',
         value_name='Valeur'
     )
     
+    # Créer le graphique avec les axes inversés
     fig = px.bar(
-        melted_df, 
-        x='Valeur', 
-        y='couple_specialites', 
-        color='Légende', 
-        barmode ='group', 
+        melted_df,
+        x='couple_specialites',  # Inversement des axes
+        y='Valeur',
+        color='Légende',
+        barmode='group',
         title=f"Comparaison des voeux et propositions pour l'année {selected_year}"
     )
     
+    # Mise à jour de la mise en page
     fig.update_layout(
-        xaxis_title="Nombre de candidats",
-        yaxis_title="Duo de spécialités",
+        xaxis_title="Duo de spécialités",  # Axe X devient duo de spécialités
+        yaxis_title="Nombre de candidats",
     )
+    
+    # Retirer les labels sur l'axe X
+    fig.update_xaxes(showticklabels=False)
     
     return fig

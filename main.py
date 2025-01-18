@@ -8,12 +8,6 @@ import dash_bootstrap_components as dbc
 import json
 import requests
 import plotly.express as px
-
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'pages')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'components')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'utils')))
-
 from src.components.map import fetch_data_from_geojson
 from src.components.graphs import generate_pie_chart, create_nested_pie_chart, generate_heatmap, generate_gender_metrics, generate_double_bar_chart
 
@@ -46,11 +40,11 @@ app.layout = html.Div([
             dbc.Col([
                 html.P("Choisissez une année pour visualiser les données :"),
                 dcc.Slider(
-                    id="annee-slider",
+                    id="year-slider",
                     min=2021,
-                    max=2025,
+                    max=2023,
                     step=1,
-                    marks={year: str(year) for year in range(2021, 2026)},
+                    marks={year: str(year) for year in range(2021, 2024)},
                     value=2023,
                 ),
             ], width={"size": 8, "offset": 2}, className="mb-4")  # Centered slider
@@ -97,17 +91,6 @@ app.layout = html.Div([
                     value=formations[0],  # Valeur par défaut
                     placeholder="Sélectionnez une formation",
                 ),
-
-                # Slider pour sélectionner une année
-                dcc.Slider(
-                    id='year-slider',
-                    min=dfJson['annee_du_bac'].min(),
-                    max=dfJson['annee_du_bac'].max(),
-                    step=1,
-                    marks={str(year): str(year) for year in dfJson['annee_du_bac'].unique()},
-                    value=dfJson['annee_du_bac'].min(),  # Valeur par défaut
-                ),
-
                 # Graphique
                 dcc.Graph(
                     id='bar-chart',
@@ -146,7 +129,7 @@ def update_graphs(selected_formation, selected_year):
 # Callback pour mettre à jour les données GeoJSON en fonction de l'année
 @app.callback(
     Output("geojson-layer", "data"),  # Met à jour les données GeoJSON
-    Input("annee-slider", "value"),  # Récupère la valeur du slider
+    Input("year-slider", "value"),  # Récupère la valeur du slider
 )
 @cache.memoize(timeout=3600)  # Cache pendant 1 heure
 def update_geojson_data(annee_cible):
@@ -234,7 +217,7 @@ def process_api_response(response):
 @app.callback(
     Output("api-result-container", "children"),
     [Input("geojson-layer", "clickData"),
-     Input("annee-slider", "value")],
+     Input("year-slider", "value")],
     prevent_initial_call=True,
 )
 def fetch_api_data(feature, selected_year):
@@ -247,7 +230,7 @@ def fetch_api_data(feature, selected_year):
     if not cod_uai:
         return "Aucun code UAI trouvé pour ce marqueur."
 
-    api_url = f"https://data.enseignementsup-recherche.gouv.fr/api/explore/v2.1/catalog/datasets/fr-esr-parcoursup/records?where=cod_uai%20LIKE%20%22{cod_uai}%22"
+    api_url = f"https://data.enseignementsup-recherche.gouv.fr/api/explore/v2.1/catalog/datasets/fr-esr-parcoursup_{selected_year}/records?where=cod_uai%20LIKE%20%22{cod_uai}%22"
     response = requests.get(api_url)
     data = process_api_response(response.json())
 
